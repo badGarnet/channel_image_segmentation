@@ -89,6 +89,40 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
     )
 
 
+class ChannelData:
+    def __init__(self, path, mask_key='mask', image_key='image', **kwargs):
+        self.path = path
+        self.mask_key = mask_key
+        self.image_key = image_key
+        self.others = kwargs
+
+    def get_data_list(self):
+        return tf.data.Dataset.list_files(
+            str(self.path/('*'+self.mask_key+'*.png'))
+        )
+
+    @staticmethod
+    def load_image(path):
+        img = tf.io.read_file(path)
+        img = tf.image.decode_png(img)
+        return img
+
+    @staticmethod
+    def process_path(path, mask_key, image_key, **kwargs):
+        label = ChannelData.load_image(path)
+        image = [ChannelData.load_image(
+            tf.strings.regex_replace(path, mask_key, image_key)
+        )]
+        for val in kwargs.values():
+            image.append(
+                ChannelData.load_image(tf.strings.regex_replace(
+                    path, mask_key, val
+                ))
+            )
+
+        return tf.concat(image, axis=-1), label
+
+
 def main():
     data_path = Path('./data')
     # load all data into numpy

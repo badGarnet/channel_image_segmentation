@@ -11,8 +11,9 @@ import tensorflow_addons as tfa
 
 
 class ChannelCutter:
-    def __init__(self, preprocessing=True):
+    def __init__(self, preprocessing=True, dataset=None):
         self.preprocessing = preprocessing
+        self.dataset = dataset
 
     @staticmethod
     def preprocess(images, labels):
