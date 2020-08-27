@@ -6,7 +6,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 
-def load_multi_channel_data(path, extension, features, masks):
+def load_multi_channel_data(path, extension, features=None, masks=None, process=None):
     fnames = [f for f in os.listdir(path) if f.endswith(extension)]
     # defin loader by file extension
     # TODO: enable .mat file
@@ -19,7 +19,28 @@ def load_multi_channel_data(path, extension, features, masks):
 
     data = list()
     for f in fnames:
-        data.append(loader(path / f))
+        d = loader(path / f)
+        if process is not None:
+            process(d)
+        data.append(d)
 
     data = combiner(data)
-    return data[:, :, :, features], data[:, :, :, masks]
+    if features is None:
+        return data
+    else:
+        return data[:, :, :, features], data[:, :, :, masks]
+
+
+def random_crop_duplicator(data, n_crops_per_image=2, batch=10):
+    return data
+
+
+
+def main():
+    data_path = Path('./data')
+    data = load_multi_channel_data(data_path, '.npy')
+    print(data.shape)
+
+
+if __name__ == "__main__":
+    main()
