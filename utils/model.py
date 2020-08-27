@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 
 import numpy as np
+import math
+import random
 import scipy.io as sio
 import os
 from pathlib import Path
@@ -14,8 +16,18 @@ class ChannelCutter:
 
     @staticmethod
     def preprocess(images, labels):
-        batch_size, i_label = images.shape[[0, -1]]
-        batch_data = tf.concat([images, labels])
-        angles = np.pi * np.random.randint(0, 360, batch_size) / 180
-        rotated = tfa.image.rotate(batch_data, angles=angles)
-        return batch_data[:, :, :, :i_label], batch_data[:, :, :, i_label]
+        return images, labels
+
+    @staticmethod
+    def get_angles(tensor, master_seed=42):
+        if len(tensor.shape) > 3:
+            angles = tf.random.uniform(
+                shape=[tensor.shape[0]],
+                minval=0,
+                maxval=2 * math.pi,
+                seed=master_seed
+            )
+        else:
+            angles = random.randint(0, 360) * math.pi / 180
+
+        return angles
