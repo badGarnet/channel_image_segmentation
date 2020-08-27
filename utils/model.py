@@ -19,22 +19,3 @@ class ChannelCutter:
         angles = np.pi * np.random.randint(0, 360, batch_size) / 180
         rotated = tfa.image.rotate(batch_data, angles=angles)
         return batch_data[:, :, :, :i_label], batch_data[:, :, :, i_label]
-
-    @staticmethod
-    def load_multi_channel_data(path, extension, features, masks):
-        fnames = [f for f in os.listdir(path) if f.endswith(extension)]
-        # defin loader by file extension
-        # TODO: enable .mat file
-        loader = {
-            '.npy': np.load,
-        }.get(extension)
-        combiner = {
-            '.npy': np.concatenate
-        }.get(extension)
-
-        data = list()
-        for f in fnames:
-            data.append(loader(path / f))
-
-        data = combiner(data)
-        return data[:, :, :, features], data[:, :, :, masks]
