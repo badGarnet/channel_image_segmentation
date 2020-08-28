@@ -138,14 +138,54 @@ class ChannelData:
 
         return tf.concat(image, axis=-1), label
 
-    def add_process(self, process):
+    def add_process(self, process, **kwargs):
         """adding a new process __after__ images are loaded and __before__ training
 
         Args:
             process (function): processing method; must take two arguments ``(features, labels)`` and returns
                 transfomred ``(features, labels)`` pairs
         """
-        self._data_mapping(process)
+        all_args = process.__code__.co_argcount
+
+        if process.__defaults__ is not None:  #  in case there are no kwargs
+            p_kwargs = len(process.__defaults__)
+        else:
+            p_kwargs = 0
+
+        if len(kwargs) > 0:
+            n_process = partial(process, **kwargs)
+        else:
+            n_process = process
+
+        n_args = all_args - p_kwargs
+        if n_args == 1:
+            n_process = self._bundled_process(n_process)
+        elif n_args == 2:
+            n_process = n_process
+        else:
+            raise ValueError(f'process should take either one or two positional arguments but got {n_args}')
+        self._data_mapping(n_process)
+
+    @staticmethod
+    def _bundled_process(process):
+
+        def wrapper(features, labels, cat_axis=-1):
+            # get number of channels in feature tensor
+            n_channels_feature = features.shape[cat_axis]
+            # generate indices to gather for features and label
+            i_features = range(n_channels_feature)
+            i_label = range(n_channels_feature, n_channels_feature + labels.shape[cat_axis])
+
+            # bundle data
+            bundled = tf.concat([features, labels], axis=cat_axis)
+            # process together
+            processed = process(bundled)
+            # recover feature and label
+            new_f = tf.gather(processed, i_features, axis=cat_axis)
+            new_l = tf.gather(processed, i_label, axis=cat_axis)
+            return new_f, new_l
+
+        return wrapper
 
 
 def main():

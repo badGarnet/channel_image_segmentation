@@ -73,3 +73,30 @@ class TestDataPipe(unittest.TestCase):
         for image, label in cdata.data.take(1):
             self.assertEqual(image.shape[-1], 4)
             self.assertEqual(image.shape[0], label.shape[0])
+
+    def test_bundle_process(self):
+        process = tf.image.flip_left_right
+        cdata1 = ChannelData(path=self.test_path, elevation='elevation')
+        new_process = ChannelData._bundled_process(process)
+        for image, label in cdata1.data.take(1):
+            new_image, new_label = new_process(image, label)
+            expected_image = process(image)
+            expected_label = process(label)
+            tf.debugging.assert_equal(expected_image, new_image)
+            tf.debugging.assert_equal(expected_label, new_label)
+
+
+    def test_add_process(self):
+        process = tf.image.flip_left_right
+        cdata1 = ChannelData(path=self.test_path, elevation='elevation')
+        cdata2 = ChannelData(path=self.test_path, elevation='elevation')
+        cdata2 = cdata2.add_process(process)
+        for image, label in cdata1.data.take(1):
+            expected_image = process(image)
+            expected_label = process(label)
+        for image, label in cdata2.data.take(1):
+            tf.debugging.assert_equal(expected_image, image)
+            tf.debugging.assert_equal(expected_label, label)
+
+
+    
