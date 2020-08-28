@@ -1,6 +1,6 @@
 import unittest
 from utils.model import ChannelCutter
-from utils.data_preparing import ChannelData
+from utils.data_preparing import ChannelData, random_rotation, get_angles
 import tensorflow as tf
 from pathlib import Path
 import os
@@ -20,15 +20,15 @@ class TestDataPipe(unittest.TestCase):
         os.makedirs(self.output_path, exist_ok=True)
 
     def test_get_angles_batch(self):
-        angles = ChannelCutter().get_angles(self.test_tensor)
+        angles = get_angles(self.test_tensor)
         self.assertEqual(
             self.test_tensor.shape[0], angles.shape[0]
         )
 
     def test_get_angles_oneof(self):
-        angles = ChannelCutter().get_angles(self.test_tensor[0])
+        angles = get_angles(self.test_tensor[0])
         self.assertTrue(
-            isinstance(angles, float)
+            1, angles.shape[0]
         )
 
     def test_init_data(self):
@@ -114,5 +114,13 @@ class TestDataPipe(unittest.TestCase):
             # tf.debugging.assert_equal(expected_image, image)
             # tf.debugging.assert_equal(expected_label, label)
 
+    def test_random_rotation(self):
+        cdata1 = ChannelData(path=self.test_path, elevation='elevation')
+        cdata1.add_process(random_rotation)
+        for image, label in cdata1.data.take(1):
+            fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+            axs[0].imshow(image)
+            axs[1].imshow(label)
+            plt.savefig(self.output_path / 'test_rotation.png', bbox_inches='tight')
 
     

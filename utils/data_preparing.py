@@ -6,6 +6,33 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 from functools import partial
 from inspect import getfullargspec
+import math
+import random
+
+
+def get_angles(tensor):
+    if len(tensor.shape) > 3:
+        angles = tf.random.uniform(
+            shape=[tensor.shape[0]],
+            minval=0,
+            maxval=2 * math.pi,
+        )
+    else:
+        angles = tf.random.uniform(
+            shape=[1],
+            minval=0,
+            maxval=2 * math.pi,
+        )
+    # else:
+    #     random.seed(seed)
+    #     angles = random.randint(0, 360) * math.pi / 180
+
+    return angles
+
+
+def random_rotation(tensor):
+    angles = get_angles(tensor)
+    return tfa.image.rotate(tensor, angles)
 
 
 def load_multi_channel_data(path, extension, features=None, masks=None, process=None):
@@ -153,7 +180,7 @@ class ChannelData:
 
         n_args = len(args.args)
         if n_args <= 1:
-            n_process = self._bundled_process(process)
+            n_process = self._bundled_process(process, **kwargs)
         elif n_args == 2:
             if len(kwargs) > 0:
                 n_process = partial(process, **kwargs)
@@ -183,13 +210,14 @@ class ChannelData:
             # bundle data
             bundled = tf.concat([features, labels], axis=cat_axis)
             # process together
-            processed = process(bundled, **kwargs)
+            processed = process(bundled)
             # recover feature and label
             new_f = tf.gather(processed, i_features, axis=cat_axis)
             new_l = tf.gather(processed, i_label, axis=cat_axis)
             return new_f, new_l
 
         return wrapper
+
 
 
 def main():

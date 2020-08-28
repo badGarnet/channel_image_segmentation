@@ -16,10 +16,6 @@ class ChannelCutter:
         self.dataset = dataset
 
     @staticmethod
-    def preprocess(images, labels):
-        return images, labels
-
-    @staticmethod
     def get_angles(tensor, master_seed=42):
         if len(tensor.shape) > 3:
             angles = tf.random.uniform(
