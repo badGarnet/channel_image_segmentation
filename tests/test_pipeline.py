@@ -63,3 +63,13 @@ class TestDataPipe(unittest.TestCase):
         for image, label in labeled_ds.take(1):
             self.assertEqual(image.shape[-1], 4)
             self.assertEqual(image.shape[0], label.shape[0])
+
+    def test_init_data(self):
+        cdata = ChannelData(path=self.test_path, elevation='elevation')
+        expected = [f for f in os.listdir(self.test_path) if 'mask' in f]
+        self.assertEqual(
+            len(expected), len(cdata.data)
+        )
+        for image, label in cdata.data.take(1):
+            self.assertEqual(image.shape[-1], 4)
+            self.assertEqual(image.shape[0], label.shape[0])

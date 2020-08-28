@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
+from functools import partial
 
 
 def load_multi_channel_data(path, extension, features=None, masks=None, process=None):
@@ -95,6 +96,21 @@ class ChannelData:
         self.mask_key = mask_key
         self.image_key = image_key
         self.others = kwargs
+        self.data = self.get_data_list()
+        self.process = [partial(
+            self.process_path,
+            mask_key=mask_key,
+            image_key=image_key,
+            **kwargs
+        )]
+        self._data_mapping()
+
+    def _data_mapping(self, process=None):
+        if process is None:
+            for proc in self.process:
+                self.data = self.data.map(proc)
+        else:
+            self.data = self.data.map(process)
 
     def get_data_list(self):
         return tf.data.Dataset.list_files(
@@ -121,6 +137,15 @@ class ChannelData:
             )
 
         return tf.concat(image, axis=-1), label
+
+    def add_process(self, process):
+        """adding a new process __after__ images are loaded and __before__ training
+
+        Args:
+            process (function): processing method; must take two arguments ``(features, labels)`` and returns
+                transfomred ``(features, labels)`` pairs
+        """
+        self._data_mapping(process)
 
 
 def main():
