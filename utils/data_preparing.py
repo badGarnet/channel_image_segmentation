@@ -5,6 +5,7 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
 from functools import partial
+from inspect import getfullargspec
 
 
 def load_multi_channel_data(path, extension, features=None, masks=None, process=None):
@@ -107,8 +108,11 @@ class ChannelData:
 
     def _data_mapping(self, process=None):
         if process is None:
-            for proc in self.process:
-                self.data = self.data.map(proc)
+            def all_processes(tensor):
+                for proc in self.process:
+                    tensor = proc(tensor)
+                return tensor
+            self.data = self.data.map(all_processes)
         else:
             self.data = self.data.map(process)
 
@@ -145,41 +149,41 @@ class ChannelData:
             process (function): processing method; must take two arguments ``(features, labels)`` and returns
                 transfomred ``(features, labels)`` pairs
         """
-        all_args = process.__code__.co_argcount
+        args = getfullargspec(process)
 
-        if process.__defaults__ is not None:  #  in case there are no kwargs
-            p_kwargs = len(process.__defaults__)
-        else:
-            p_kwargs = 0
-
-        if len(kwargs) > 0:
-            n_process = partial(process, **kwargs)
-        else:
-            n_process = process
-
-        n_args = all_args - p_kwargs
-        if n_args == 1:
-            n_process = self._bundled_process(n_process)
+        n_args = len(args.args)
+        if n_args <= 1:
+            n_process = self._bundled_process(process)
         elif n_args == 2:
-            n_process = n_process
+            if len(kwargs) > 0:
+                n_process = partial(process, **kwargs)
+            else:
+                n_process = process
         else:
             raise ValueError(f'process should take either one or two positional arguments but got {n_args}')
+        self.process.append(n_process)
         self._data_mapping(n_process)
+        return self
 
     @staticmethod
-    def _bundled_process(process):
+    def _bundled_process(process, **kwargs):
 
+        @tf.function
         def wrapper(features, labels, cat_axis=-1):
             # get number of channels in feature tensor
             n_channels_feature = features.shape[cat_axis]
             # generate indices to gather for features and label
-            i_features = range(n_channels_feature)
-            i_label = range(n_channels_feature, n_channels_feature + labels.shape[cat_axis])
+            if n_channels_feature is not None:
+                i_features = tf.range(n_channels_feature)
+                i_label = tf.range(n_channels_feature, n_channels_feature + labels.shape[cat_axis])
+            else:
+                # TODO: how to get n channels when all is (none, none, none)
+                i_features, i_label = tf.range(4), tf.range(4, 5)
 
             # bundle data
             bundled = tf.concat([features, labels], axis=cat_axis)
             # process together
-            processed = process(bundled)
+            processed = process(bundled, **kwargs)
             # recover feature and label
             new_f = tf.gather(processed, i_features, axis=cat_axis)
             new_l = tf.gather(processed, i_label, axis=cat_axis)

@@ -5,6 +5,8 @@ import tensorflow as tf
 from pathlib import Path
 import os
 from functools import partial
+import matplotlib.pyplot as plt
+import shutil
 
 
 class TestDataPipe(unittest.TestCase):
@@ -14,6 +16,8 @@ class TestDataPipe(unittest.TestCase):
             shape=(10, 200, 300, 5), minval=0, maxval=1
         )
         self.test_path=Path('./data/test_data')
+        self.output_path = Path('./data/test_output')
+        os.makedirs(self.output_path, exist_ok=True)
 
     def test_get_angles_batch(self):
         angles = ChannelCutter().get_angles(self.test_tensor)
@@ -84,9 +88,15 @@ class TestDataPipe(unittest.TestCase):
             expected_label = process(label)
             tf.debugging.assert_equal(expected_image, new_image)
             tf.debugging.assert_equal(expected_label, new_label)
-
+            fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+            axs[0][0].imshow(expected_image)
+            axs[0][1].imshow(image)
+            axs[1][0].imshow(expected_label)
+            axs[1][1].imshow(label)
+            plt.savefig(self.output_path / 'test_bundle.png', bbox_inches='tight')
 
     def test_add_process(self):
+        # TODO: create a folder with just one image so we can compare
         process = tf.image.flip_left_right
         cdata1 = ChannelData(path=self.test_path, elevation='elevation')
         cdata2 = ChannelData(path=self.test_path, elevation='elevation')
@@ -95,8 +105,14 @@ class TestDataPipe(unittest.TestCase):
             expected_image = process(image)
             expected_label = process(label)
         for image, label in cdata2.data.take(1):
-            tf.debugging.assert_equal(expected_image, image)
-            tf.debugging.assert_equal(expected_label, label)
+            fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+            axs[0][0].imshow(expected_image)
+            axs[0][1].imshow(image)
+            axs[1][0].imshow(expected_label)
+            axs[1][1].imshow(label)
+            plt.savefig(self.output_path / 'test_add_process.png', bbox_inches='tight')
+            # tf.debugging.assert_equal(expected_image, image)
+            # tf.debugging.assert_equal(expected_label, label)
 
 
     
