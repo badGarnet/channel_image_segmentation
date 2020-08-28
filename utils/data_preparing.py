@@ -4,6 +4,35 @@ import os
 from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
+from functools import partial
+from inspect import getfullargspec
+import math
+import random
+
+
+def get_angles(tensor):
+    if len(tensor.shape) > 3:
+        angles = tf.random.uniform(
+            shape=[tensor.shape[0]],
+            minval=0,
+            maxval=2 * math.pi,
+        )
+    else:
+        angles = tf.random.uniform(
+            shape=[1],
+            minval=0,
+            maxval=2 * math.pi,
+        )
+    # else:
+    #     random.seed(seed)
+    #     angles = random.randint(0, 360) * math.pi / 180
+
+    return angles
+
+
+def random_rotation(tensor):
+    angles = get_angles(tensor)
+    return tfa.image.rotate(tensor, angles)
 
 
 def load_multi_channel_data(path, extension, features=None, masks=None, process=None):
@@ -95,6 +124,24 @@ class ChannelData:
         self.mask_key = mask_key
         self.image_key = image_key
         self.others = kwargs
+        self.data = self.get_data_list()
+        self.process = [partial(
+            self.process_path,
+            mask_key=mask_key,
+            image_key=image_key,
+            **kwargs
+        )]
+        self._data_mapping()
+
+    def _data_mapping(self, process=None):
+        if process is None:
+            def all_processes(tensor):
+                for proc in self.process:
+                    tensor = proc(tensor)
+                return tensor
+            self.data = self.data.map(all_processes)
+        else:
+            self.data = self.data.map(process)
 
     def get_data_list(self):
         return tf.data.Dataset.list_files(
@@ -121,6 +168,56 @@ class ChannelData:
             )
 
         return tf.concat(image, axis=-1), label
+
+    def add_process(self, process, **kwargs):
+        """adding a new process __after__ images are loaded and __before__ training
+
+        Args:
+            process (function): processing method; must take two arguments ``(features, labels)`` and returns
+                transfomred ``(features, labels)`` pairs
+        """
+        args = getfullargspec(process)
+
+        n_args = len(args.args)
+        if n_args <= 1:
+            n_process = self._bundled_process(process, **kwargs)
+        elif n_args == 2:
+            if len(kwargs) > 0:
+                n_process = partial(process, **kwargs)
+            else:
+                n_process = process
+        else:
+            raise ValueError(f'process should take either one or two positional arguments but got {n_args}')
+        self.process.append(n_process)
+        self._data_mapping(n_process)
+        return self
+
+    @staticmethod
+    def _bundled_process(process, **kwargs):
+
+        @tf.function
+        def wrapper(features, labels, cat_axis=-1):
+            # get number of channels in feature tensor
+            n_channels_feature = features.shape[cat_axis]
+            # generate indices to gather for features and label
+            if n_channels_feature is not None:
+                i_features = tf.range(n_channels_feature)
+                i_label = tf.range(n_channels_feature, n_channels_feature + labels.shape[cat_axis])
+            else:
+                # TODO: how to get n channels when all is (none, none, none)
+                i_features, i_label = tf.range(4), tf.range(4, 5)
+
+            # bundle data
+            bundled = tf.concat([features, labels], axis=cat_axis)
+            # process together
+            processed = process(bundled)
+            # recover feature and label
+            new_f = tf.gather(processed, i_features, axis=cat_axis)
+            new_l = tf.gather(processed, i_label, axis=cat_axis)
+            return new_f, new_l
+
+        return wrapper
+
 
 
 def main():
