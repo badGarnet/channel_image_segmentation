@@ -11,20 +11,23 @@ import tensorflow_addons as tfa
 
 
 class ChannelCutter:
-    def __init__(self, preprocessing=True, dataset=None):
-        self.preprocessing = preprocessing
-        self.dataset = dataset
+    def __init__(self, config):
+        self._config = config
+        self._base_layer_names = config.get('base_layer_names', list())
+        self._base_config = config.get('base_config', None)
+        self.base_model = config.get(
+            'base_model', tf.keras.applications.MobileNetV2
+        )
+        if self._base_config is not None:
+            self.base_model = self.base_model(**self._base_config)
+        
+    def _get_base_layers(self):
+        layers = list()
+        for name in self._base_layer_names:
+            try:
+                layers.append(self.base_model.get_layer(name))
+            except ValueError:
+                print(f"can't get layer {name} from base model {self.base_model}")
+                layers.append(None)
+        return layers
 
-    @staticmethod
-    def get_angles(tensor, master_seed=42):
-        if len(tensor.shape) > 3:
-            angles = tf.random.uniform(
-                shape=[tensor.shape[0]],
-                minval=0,
-                maxval=2 * math.pi,
-                seed=master_seed
-            )
-        else:
-            angles = random.randint(0, 360) * math.pi / 180
-
-        return angles
