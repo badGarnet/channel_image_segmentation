@@ -106,7 +106,7 @@ class ChannelCutter:
     @staticmethod
     def _build_simple_unet(
         input_shape, n_classes=2, activation='relu',
-        down_steps=3, init_kernels=64, init_kernel_size=7, 
+        down_steps=3, init_kernels=32, init_kernel_size=7, 
         other_kernel_size=3, pool_size=2, block_n_steps=3,
         pre_unet_conv_steps=2, batch_norm=True):
         inp = tf.keras.Input(shape=(input_shape))
