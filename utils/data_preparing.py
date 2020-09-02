@@ -35,6 +35,31 @@ def random_rotation(tensor):
     return tfa.image.rotate(tensor, angles)
 
 
+def maybe_pad_image(x):
+    input_shape = x.shape
+
+    if len(input_shape) == 4:
+        input_shape = input_shape[1:]
+
+    height, width = input_shape[0], input_shape[1]
+    # padding input to be a square image if necessary
+    pad = ~(height == width)
+    if pad:
+        if height > width:
+            h_offset = 0
+            w_offset = int((height - width) / 2)
+            target = height
+        else:
+            w_offset = 0
+            h_offset = int((width - height) / 2)
+            target = width
+        return tf.image.pad_to_bounding_box(
+            x, h_offset, w_offset, target, target
+        )
+    else:
+        return x
+
+
 def load_multi_channel_data(path, extension, features=None, masks=None, process=None):
     """loading data from a directory with a given extension, e.g., ``.npy``. Optionally process
     the data on a per file basis

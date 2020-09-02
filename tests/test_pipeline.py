@@ -1,6 +1,6 @@
 import unittest
 from utils.model import ChannelCutter
-from utils.data_preparing import ChannelData, random_rotation, get_angles
+from utils.data_preparing import ChannelData, random_rotation, get_angles, maybe_pad_image
 import tensorflow as tf
 from pathlib import Path
 import os
@@ -48,6 +48,12 @@ class TestDataPipe(unittest.TestCase):
         images = dlist.map(ChannelData.load_image)
         self.assertEqual(
             len(dlist), len(images)
+        )
+
+    def test_pad_image(self):
+        x = maybe_pad_image(self.test_tensor[0, :, :, :])
+        self.assertEqual(
+            x.shape[0], x.shape[1]
         )
 
     def test_process_path(self):
