@@ -1,5 +1,6 @@
 import unittest
 from utils.model import ChannelCutter
+import tensorflow as tf
 
 
 class TestChannelCutter(unittest.TestCase):
@@ -55,3 +56,12 @@ class TestChannelCutter(unittest.TestCase):
     def test_unet_arch(self):
         model = ChannelCutter(self.basic_config)
         self.assertTrue(model.unet is not None)
+
+    def test_compile(self):
+        model = ChannelCutter(self.basic_config)
+        model.compile_model(
+            optimizer='adam', loss='mse', metrics=['accuracy']
+        )
+        self.assertTrue(
+            tf.keras.utils.plot_model(model.unet, show_shapes=True)
+        )

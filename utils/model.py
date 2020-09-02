@@ -22,6 +22,7 @@ class ChannelCutter:
         self.n_classes = config.get('n_classes', None)
         self._base_layers = None
         self.base_model = None
+        self._compiled = False
 
         if self._base_config is not None:
             self.base_model = config.get(
@@ -29,11 +30,21 @@ class ChannelCutter:
             )
             self.base_model = self.base_model(**self._base_config)
 
-        if len(self._base_layer_names) > 0:
-            self._base_layers = self._get_base_layers(self._base_layer_names)
-            self.unet = None
+            if len(self._base_layer_names) > 0:
+                self._base_layers = self._get_base_layers(self._base_layer_names)
+                self.unet = None
         else:
             self.unet = self._build_simple_unet(self._input_shape, self.n_classes)
+
+    def compile_model(self, optimizer, loss, **kwargs):
+        self.unet.compile(optimizer=optimizer, loss=loss, **kwargs)
+        self._compiled = True
+        return self.unet
+
+    def fit(self, X, y):
+        if not self._compiled:
+            raise ValueError("model is not compiled yet")
+        return self.unet.fit(X, y)
         
     def _get_base_layers(self, names=None):
         layers = list()
@@ -138,4 +149,4 @@ class ChannelCutter:
         x = Conv2D(filters=n_classes, kernel_size=1, activation=activation)(x)
         x = tf.keras.activations.softmax(x)
 
-        return x
+        return tf.keras.Model(inputs=inp, outputs=x)
