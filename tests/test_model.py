@@ -11,6 +11,10 @@ class TestChannelCutter(unittest.TestCase):
                 'include_top': False
             }
         }
+        cls.basic_config = {
+            'input_shape': [128, 128, 4],
+            'n_classes': 2
+        }
 
     def test_init(self):
         # generate from an existing application
@@ -49,5 +53,5 @@ class TestChannelCutter(unittest.TestCase):
                     self.assertEqual(name, layer.name)
 
     def test_unet_arch(self):
-        model = ChannelCutter(self.config)
+        model = ChannelCutter(self.basic_config)
         self.assertTrue(model.unet is not None)
