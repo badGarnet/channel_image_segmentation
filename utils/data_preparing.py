@@ -8,6 +8,34 @@ from functools import partial
 from inspect import getfullargspec
 import math
 import random
+import shutil
+
+
+def move_files_into_train_test(
+    path, base_pattern, seed=42, splits={'train': 0.7, 'test': 0.3}):
+    files = os.listdir(path)
+    index = np.array([f for f in files if base_pattern in f])
+    total_sample_size = len(index)
+    np.random.seed(seed)
+    np.random.shuffle(index)
+    split_index = {}
+    for key, val in splits.items():
+        end = int(total_sample_size * val)
+        split_index[key] = index[:end]
+        index = index[end:]
+    
+    if len(index) > 1:
+        split_index[key].extend(index)
+
+    path = Path(path)
+    for key, indices in split_index.items():
+        save_path = path / key
+        os.makedirs(save_path, exist_ok=True)
+        for idx in indices:
+            to_move = [f for f in files if idx.split(base_pattern)[0] in f]
+            for f in to_move:
+                shutil.move(str(path / f), str(save_path))
+                files.remove(f)
 
 
 def get_angles(tensor):
@@ -261,6 +289,7 @@ def main():
         dslice = tf.data.Dataset.from_tensor_slices(data)
         # apply cropping: we run multiple passes
         n_pass = 2
+        np.random.seed(42)
         seeds = np.random.randint(0, 1000, n_pass)
         for i_pass in range(n_pass):
             print(f'cropping pass {i_pass+1} of dataset {part}...', end='')
@@ -276,9 +305,14 @@ def main():
             for i, batch in enumerate(cropped_slices):
                 for j, image in enumerate(batch):
                     save_crops(
-                        image, prefix=f'part_{part}_', batch=i, idx=j, 
+                        image, prefix=f'part_{part}_pass_{i_pass}_', batch=i, idx=j, 
                         path=crop_path)
+
+                    
+def move_files():
+    data_path = Path('./data') / 'crop_512x320'
+    move_files_into_train_test(data_path, 'mask')
 
 
 if __name__ == "__main__":
-    main()
+    move_files()
