@@ -35,8 +35,9 @@ def random_rotation(tensor):
     return tfa.image.rotate(tensor, angles)
 
 
-def maybe_pad_image(x):
-    input_shape = x.shape
+def maybe_pad_image(x, input_shape=None):
+    if input_shape is None:
+        input_shape = x.shape
 
     if len(input_shape) == 4:
         input_shape = input_shape[1:]
@@ -99,7 +100,7 @@ def load_multi_channel_data(path, extension, features=None, masks=None, process=
         return data[:, :, :, features], data[:, :, :, masks]
 
 
-def crop_image(image, img_height=500, img_width=300, img_channel=5):
+def crop_image(image, img_height=512, img_width=320, img_channel=5):
     """cropping image using tfa's random_crop method
 
     Args:
@@ -247,6 +248,8 @@ class ChannelData:
 
 def main():
     data_path = Path('./data')
+    crop_path = data_path / 'crop_512x320'
+    os.makedirs(crop_path, exist_ok=True)
     # load all data into numpy
     fnames = [f for f in os.listdir(data_path) if f.endswith('.npy')]
 
@@ -272,7 +275,9 @@ def main():
             print('saving data')
             for i, batch in enumerate(cropped_slices):
                 for j, image in enumerate(batch):
-                    save_crops(image, prefix=f'part_{part}_', batch=i, idx=j, path=data_path / 'crops')
+                    save_crops(
+                        image, prefix=f'part_{part}_', batch=i, idx=j, 
+                        path=crop_path)
 
 
 if __name__ == "__main__":

@@ -58,7 +58,7 @@ class TestChannelCutter(unittest.TestCase):
         self.assertTrue(model.unet is not None)
 
     def test_unet_arch_pad_to_square(self):
-        model = ChannelCutter({'input_shape': [200, 100, 4], 'n_classes': 2})
+        model = ChannelCutter({'input_shape': [512, 320, 4], 'n_classes': 2})
         self.assertTrue(model.unet is not None)
 
     def test_compile(self):
