@@ -42,14 +42,14 @@ def get_angles(tensor):
     if len(tensor.shape) > 3:
         angles = tf.random.uniform(
             shape=[tensor.shape[0]],
-            minval=0,
-            maxval=2 * math.pi,
+            minval=-10. * math.pi / 180.,
+            maxval=10. * math.pi / 180.,
         )
     else:
         angles = tf.random.uniform(
             shape=[1],
-            minval=0,
-            maxval=2 * math.pi,
+            minval=-10. * math.pi / 180.,
+            maxval=10. * math.pi / 180.,
         )
     # else:
     #     random.seed(seed)
@@ -189,11 +189,8 @@ class ChannelData:
 
     def _data_mapping(self, process=None):
         if process is None:
-            def all_processes(tensor):
-                for proc in self.process:
-                    tensor = proc(tensor)
-                return tensor
-            self.data = self.data.map(all_processes)
+            for proc in self.process:
+                self.data = self.data.map(proc)
         else:
             self.data = self.data.map(process)
 
