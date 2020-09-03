@@ -92,27 +92,36 @@ def focal_tversky(y_true,y_pred):
     gamma = 0.75
     return K.pow((1-pt_1), gamma)
 
+# credit: Yao You
 
-def generalized_dice_loss(y_true_in, y_pred_in, n_class=2, sigma=1.):
-    if len(y_true_in.shape) == 3:
-        onehot = tf.one_hot(tf.gather(y_true_in, indices=0, axis=-1), depth=n_class)
+def mean_iou_loss(y_true_in, y_pred_in, sigma=1):
+    y_true, y_pred = prepare(y_true_in, y_pred_in)
+
+    ref_vol = tf.keras.backend.flatten(y_true)
+    seg_vol = tf.keras.backend.flatten(y_pred)
+    # intersect = ref_vol * seg_vol
+    # generalised_dice_numerator = 2. * tf.reduce_sum(intersect)
+    # generalised_dice_denominator = tf.reduce_sum(seg_vol + ref_vol)
+    # generalised_dice_score = \
+    #     generalised_dice_numerator / (generalised_dice_denominator + sigma)
+    iou = 2 * ref_vol * seg_vol / (seg_vol + ref_vol)
+    iou = iou[~tf.math.is_nan(iou)]
+
+    mean_iou = tf.reduce_mean(iou)
+    if tf.math.is_inf(mean_iou) or tf.math.is_nan(mean_iou):
+        iou = tf.ones_like(iou)
+        return tf.reduce_mean(iou)
     else:
-        onehot = tf.one_hot(y_pred_in, depth=n_class)
+        return 1 - mean_iou
 
-    generalised_dice_numerator = 0.
-    generalised_dice_denominator = 0.
-    for i in range(onehot.shape[-1]):
-        y_true = tf.gather(onehot, indices=i, axis=-1)
-        y_pred = tf.gather(y_pred_in, indices=i, axis=-1)
-        y_true = tf.cast(y_true, tf.float32)
-        y_pred = tf.cast(y_pred, tf.float32)
-        ref_vol = tf.keras.backend.flatten(y_true)
-        intersect = tf.keras.backend.flatten(y_true * y_pred)
-        seg_vol = tf.keras.backend.flatten(y_pred)
-        weight = 1. / tf.maximum(sigma, tf.reduce_sum(ref_vol))
-        generalised_dice_numerator += 2. * weight * tf.reduce_sum(intersect)
-        generalised_dice_denominator += weight * tf.reduce_sum(seg_vol + ref_vol)
+def reduced_iou_loss(y_true_in, y_pred_in, sigma=1):
+    y_true, y_pred = prepare(y_true_in, y_pred_in)
 
-    generalised_dice_score = \
-        generalised_dice_numerator / (generalised_dice_denominator + sigma)
-    return 1 - generalised_dice_score
+    ref_vol = tf.keras.backend.flatten(y_true)
+    seg_vol = tf.keras.backend.flatten(y_pred)
+    # intersect = ref_vol * seg_vol
+    # generalised_dice_numerator = 2. * tf.reduce_sum(intersect)
+    # generalised_dice_denominator = tf.reduce_sum(seg_vol + ref_vol)
+    # generalised_dice_score = \
+    #     generalised_dice_numerator / (generalised_dice_denominator + sigma)
+    return 1 - 2 * tf.reduce_sum(ref_vol * seg_vol) / (tf.reduce_sum(seg_vol + ref_vol) + sigma)

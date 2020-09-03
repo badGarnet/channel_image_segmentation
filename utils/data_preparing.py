@@ -168,7 +168,7 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
         path / (prefix + 'elevation.png'), tensor[:, :, 3:4]
     )
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'mask.png'), tensor[:, :, 4:]
+        path / (prefix + 'mask.png'), tensor[:, :, 4:] / 255
     )
 
 
@@ -209,8 +209,9 @@ class ChannelData:
         return img
 
     @staticmethod
-    def process_path(path, mask_key, image_key, **kwargs):
-        label = ChannelData.load_image(path)
+    def process_path(path, mask_key, image_key, label_scaler=255, **kwargs):
+        label = ChannelData.load_image(path) / tf.cast(label_scaler, tf.uint8)
+        label = tf.cast(label, tf.uint8)
         image = [ChannelData.load_image(
             tf.strings.regex_replace(path, mask_key, image_key)
         )]

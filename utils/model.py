@@ -68,20 +68,22 @@ class ChannelCutter:
 
 
     @staticmethod
-    def down_block(i_block, x, n_filters, n_steps, kernel_size=3, pool_size=2, **kwargs):
+    def down_block(i_block, x, n_filters, n_steps, kernel_size=3, pool_size=2, batch_norm=True, **kwargs):
         for i in range(n_steps):
             x = Conv2D(
                 n_filters, kernel_size, padding='same',
                 name=f'down_conv_block{i_block}_step{i}', 
                 **kwargs
             )(x)
+            if batch_norm:
+                x = BatchNormalization()(x)
 
         pre_pool = x
         x = MaxPool2D(pool_size=(pool_size), name=f'maxpool_block{i_block}')(x)
         return x, pre_pool
 
     @staticmethod
-    def up_block(i_block, pre_pool, x, pool_size, n_filters, n_steps, kernel_size, **kwargs):
+    def up_block(i_block, pre_pool, x, pool_size, n_filters, n_steps, kernel_size, batch_norm=True, **kwargs):
         x = Conv2DTranspose(
             filters=x.shape[-1], kernel_size=kernel_size, strides=pool_size, 
             padding='same', name=f'upsample_block{i_block}'
@@ -93,6 +95,8 @@ class ChannelCutter:
                 name=f'up_conv_block{i_block}_step{i}', 
                 **kwargs
             )(x)
+            if batch_norm:
+                x = BatchNormalization()(x)
         return x
 
     @staticmethod
@@ -138,6 +142,8 @@ class ChannelCutter:
                 filters=n_filters[-1] * 2, kernel_size=other_kernel_size, activation=activation,
                 padding='same', name=f'up_conv_u_step{i}', 
             )(x)
+            if batch_norm:
+                x = BatchNormalization()(x)
 
         for i_up in range(down_steps):
             x = ChannelCutter.up_block(
