@@ -308,6 +308,11 @@ def main():
                         image, prefix=f'part_{part}_pass_{i_pass}_', batch=i, idx=j, 
                         path=crop_path)
 
+    # move files into train, val, and test
+    move_files_into_train_test(crop_path, 'mask', splits={
+        'train': 0.6, 'val': 0.2, 'test': 0.2
+    })
+
                     
 def move_files():
     data_path = Path('./data') / 'crop_512x320'
@@ -315,4 +320,4 @@ def move_files():
 
 
 if __name__ == "__main__":
-    move_files()
+    main()
