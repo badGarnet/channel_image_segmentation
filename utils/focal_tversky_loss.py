@@ -125,3 +125,8 @@ def reduced_iou_loss(y_true_in, y_pred_in, sigma=1):
     # generalised_dice_score = \
     #     generalised_dice_numerator / (generalised_dice_denominator + sigma)
     return 1 - 2 * tf.reduce_sum(ref_vol * seg_vol) / (tf.reduce_sum(seg_vol + ref_vol) + sigma)
+
+def weighted_ce_loss(y_true_in, y_pred_in, pos_weight=1):
+    y_true, y_pred = prepare(y_true_in, y_pred_in)
+    loss = tf.nn.weighted_cross_entropy_with_logits(y_true, y_pred, pos_weight=pos_weight)
+    return tf.reduce_sum(loss)
