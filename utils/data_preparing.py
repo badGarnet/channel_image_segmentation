@@ -8,20 +8,48 @@ from functools import partial
 from inspect import getfullargspec
 import math
 import random
+import shutil
+
+
+def move_files_into_train_test(
+    path, base_pattern, seed=42, splits={'train': 0.7, 'test': 0.3}):
+    files = os.listdir(path)
+    index = np.array([f for f in files if base_pattern in f])
+    total_sample_size = len(index)
+    np.random.seed(seed)
+    np.random.shuffle(index)
+    split_index = {}
+    for key, val in splits.items():
+        end = int(total_sample_size * val)
+        split_index[key] = index[:end]
+        index = index[end:]
+    
+    if len(index) > 1:
+        split_index[key].extend(index)
+
+    path = Path(path)
+    for key, indices in split_index.items():
+        save_path = path / key
+        os.makedirs(save_path, exist_ok=True)
+        for idx in indices:
+            to_move = [f for f in files if idx.split(base_pattern)[0] in f]
+            for f in to_move:
+                shutil.move(str(path / f), str(save_path))
+                files.remove(f)
 
 
 def get_angles(tensor):
     if len(tensor.shape) > 3:
         angles = tf.random.uniform(
             shape=[tensor.shape[0]],
-            minval=0,
-            maxval=2 * math.pi,
+            minval=-10. * math.pi / 180.,
+            maxval=10. * math.pi / 180.,
         )
     else:
         angles = tf.random.uniform(
             shape=[1],
-            minval=0,
-            maxval=2 * math.pi,
+            minval=-10. * math.pi / 180.,
+            maxval=10. * math.pi / 180.,
         )
     # else:
     #     random.seed(seed)
@@ -33,6 +61,32 @@ def get_angles(tensor):
 def random_rotation(tensor):
     angles = get_angles(tensor)
     return tfa.image.rotate(tensor, angles)
+
+
+def maybe_pad_image(x, input_shape=None):
+    if input_shape is None:
+        input_shape = x.shape
+
+    if len(input_shape) == 4:
+        input_shape = input_shape[1:]
+
+    height, width = input_shape[0], input_shape[1]
+    # padding input to be a square image if necessary
+    pad = ~(height == width)
+    if pad:
+        if height > width:
+            h_offset = 0
+            w_offset = int((height - width) / 2)
+            target = height
+        else:
+            w_offset = 0
+            h_offset = int((width - height) / 2)
+            target = width
+        return tf.image.pad_to_bounding_box(
+            x, h_offset, w_offset, target, target
+        )
+    else:
+        return x
 
 
 def load_multi_channel_data(path, extension, features=None, masks=None, process=None):
@@ -74,7 +128,7 @@ def load_multi_channel_data(path, extension, features=None, masks=None, process=
         return data[:, :, :, features], data[:, :, :, masks]
 
 
-def crop_image(image, img_height=500, img_width=300, img_channel=5):
+def crop_image(image, img_height=512, img_width=320, img_channel=5):
     """cropping image using tfa's random_crop method
 
     Args:
@@ -114,7 +168,7 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
         path / (prefix + 'elevation.png'), tensor[:, :, 3:4]
     )
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'mask.png'), tensor[:, :, 4:]
+        path / (prefix + 'mask.png'), tensor[:, :, 4:] / 255
     )
 
 
@@ -135,11 +189,8 @@ class ChannelData:
 
     def _data_mapping(self, process=None):
         if process is None:
-            def all_processes(tensor):
-                for proc in self.process:
-                    tensor = proc(tensor)
-                return tensor
-            self.data = self.data.map(all_processes)
+            for proc in self.process:
+                self.data = self.data.map(proc)
         else:
             self.data = self.data.map(process)
 
@@ -155,8 +206,9 @@ class ChannelData:
         return img
 
     @staticmethod
-    def process_path(path, mask_key, image_key, **kwargs):
-        label = ChannelData.load_image(path)
+    def process_path(path, mask_key, image_key, label_scaler=255, **kwargs):
+        label = ChannelData.load_image(path) / tf.cast(label_scaler, tf.uint8)
+        label = tf.cast(label, tf.uint8)
         image = [ChannelData.load_image(
             tf.strings.regex_replace(path, mask_key, image_key)
         )]
@@ -222,6 +274,8 @@ class ChannelData:
 
 def main():
     data_path = Path('./data')
+    crop_path = data_path / 'crop_512x320'
+    os.makedirs(crop_path, exist_ok=True)
     # load all data into numpy
     fnames = [f for f in os.listdir(data_path) if f.endswith('.npy')]
 
@@ -233,6 +287,7 @@ def main():
         dslice = tf.data.Dataset.from_tensor_slices(data)
         # apply cropping: we run multiple passes
         n_pass = 2
+        np.random.seed(42)
         seeds = np.random.randint(0, 1000, n_pass)
         for i_pass in range(n_pass):
             print(f'cropping pass {i_pass+1} of dataset {part}...', end='')
@@ -247,7 +302,19 @@ def main():
             print('saving data')
             for i, batch in enumerate(cropped_slices):
                 for j, image in enumerate(batch):
-                    save_crops(image, prefix=f'part_{part}_', batch=i, idx=j, path=data_path / 'crops')
+                    save_crops(
+                        image, prefix=f'part_{part}_pass_{i_pass}_', batch=i, idx=j, 
+                        path=crop_path)
+
+    # move files into train, val, and test
+    move_files_into_train_test(crop_path, 'mask', splits={
+        'train': 0.6, 'val': 0.2, 'test': 0.2
+    })
+
+                    
+def move_files():
+    data_path = Path('./data') / 'crop_512x320'
+    move_files_into_train_test(data_path, 'mask')
 
 
 if __name__ == "__main__":

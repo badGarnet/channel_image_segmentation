@@ -1,6 +1,6 @@
 import unittest
 from utils.model import ChannelCutter
-from utils.data_preparing import ChannelData, random_rotation, get_angles
+from utils.data_preparing import ChannelData, random_rotation, get_angles, maybe_pad_image
 import tensorflow as tf
 from pathlib import Path
 import os
@@ -48,6 +48,12 @@ class TestDataPipe(unittest.TestCase):
         images = dlist.map(ChannelData.load_image)
         self.assertEqual(
             len(dlist), len(images)
+        )
+
+    def test_pad_image(self):
+        x = maybe_pad_image(self.test_tensor[0, :, :, :])
+        self.assertEqual(
+            x.shape[0], x.shape[1]
         )
 
     def test_process_path(self):
@@ -119,8 +125,21 @@ class TestDataPipe(unittest.TestCase):
         cdata1.add_process(random_rotation)
         for image, label in cdata1.data.take(1):
             fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+            print(image.shape)
+            print(label.shape)
             axs[0].imshow(image)
             axs[1].imshow(label)
             plt.savefig(self.output_path / 'test_rotation.png', bbox_inches='tight')
 
+    def test_no_added_mapping(self):
+        cdata1 = ChannelData(path=self.test_path, elevation='elevation')
+        for image, label in cdata1.data.take(1):
+            self.assertTrue(image.shape[-1] is not None)
+            self.assertTrue(label.shape[-1] is not None)
+            print(image.shape)
+            print(label.shape)
+            fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+            axs[0].imshow(image)
+            axs[1].imshow(label)
+            plt.savefig(self.output_path / 'test_loading.png', bbox_inches='tight')
     

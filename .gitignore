@@ -1,6 +1,10 @@
 # data
 data/
 
+# logs
+logs/
+notes/models/
+
 # IDE
 .vscode
 
