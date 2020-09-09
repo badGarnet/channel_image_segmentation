@@ -14,7 +14,23 @@ The module ``data_preparing`` provides methods to generate the groups of images 
 
 ## requirements
 
-We recommend using virtual environments to isolate the program environment. The file `requirements.txt` contains a list of module needed for the project. To setup an environment using ``python3-venv``:
+### Python 3
+
+The [The Hitchhiker’s Guide to Python](https://docs.python-guide.org/) contains 
+detailed instructions on how to setup python and virtualenv (recommended). Please follow it to install Python 3.
+
+### modules
+
+We recommend using virtual environments to isolate the program environment. The file `requirements.txt` contains a list of module needed for the project. To setup an environment using ``python3-venv`` on Windows:
+
+```terminal
+cd \path\to\repo
+python3 -m venv .venv
+.venv\Scripts\activate
+pip3 install -r requirements.txt
+```
+
+On Linux/MacOS:
 
 ```bash
 cd /path/to/repo

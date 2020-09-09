@@ -39,7 +39,7 @@ class TestDataPipe(unittest.TestCase):
         cdata = ChannelData(path=self.test_path, elevation='elevation')
         dlist = list(cdata.get_data_list().as_numpy_iterator())
         expected = [f for f in os.listdir(self.test_path) if 'mask' in f]
-        actual = [str(f).split('/')[-1][:-1] for f in dlist]
+        actual = [str(f).split(os.sep)[-1][:-1] for f in dlist]
         self.assertListEqual(sorted(expected), sorted(actual))
 
     def test_load_image(self):
