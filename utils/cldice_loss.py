@@ -64,8 +64,8 @@ def _cast_to(*args, dtype=tf.float32):
         return (results)
 
 
-def _maybe_trim_logits(pred, target, data_format="channel_first"):
-    if data_format == 'channel_first':
+def _maybe_trim_logits(pred, target, data_format="channels_first"):
+    if data_format == 'channels_first':
         pred, target = _move_channel_to_last(pred, target)
 
     if (target.shape[-1] == 1) and (pred.shape[-1] == 2):
@@ -151,7 +151,7 @@ def norm_intersection(center_line, vessel):
     return (intersection + smooth) / (K.sum(clf, axis=-1) + smooth)
 
 
-def soft_cldice_loss(k=10, data_format="channels_first"):
+class SoftClDice:
     """clDice loss function for tensorflow/keras
     Args:
         k: needs to be greater or equal to the maximum radius of the tube structure.
@@ -159,17 +159,20 @@ def soft_cldice_loss(k=10, data_format="channels_first"):
     Returns:
         loss_function(y_true, y_pred)  
     """
+    def __init__(self, k=10, data_format="channels_last"):
+        self.k = k
+        self.data_format = data_format
 
-    def loss(target, pred):
+    def loss(self, target, pred, data_format=None):
+        if data_format is None:
+            data_format = self.data_format
         pred, target = _maybe_trim_logits(pred, target, data_format)
         pred, target = _move_channel_to_first(pred, target)
         pred, target = _cast_to(pred, target, dtype=tf.float32)
 
-        cl_pred = soft_skeletonize(pred, thresh_width=k)
-        target_skeleton = soft_skeletonize(target, thresh_width=k)
+        cl_pred = soft_skeletonize(pred, thresh_width=self.k)
+        target_skeleton = soft_skeletonize(target, thresh_width=self.k)
         iflat = norm_intersection(cl_pred, target)
         tflat = norm_intersection(target_skeleton, pred)
         intersection = iflat * tflat
-        return 1 - ((2.0 * intersection) / (iflat + tflat))
-
-    return loss
+        return tf.reduce_mean(1 - ((2.0 * intersection) / (iflat + tflat)))
