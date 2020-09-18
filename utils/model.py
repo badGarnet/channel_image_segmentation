@@ -20,6 +20,7 @@ class ChannelCutter:
         self._base_config = config.get('base_config', None)
         self._input_shape = config.get('input_shape', None)
         self.n_classes = config.get('n_classes', None)
+        self.activation = config.get('activation', 'relu')
         self._base_layers = None
         self.base_model = None
         self._compiled = False
@@ -34,7 +35,10 @@ class ChannelCutter:
                 self._base_layers = self._get_base_layers(self._base_layer_names)
                 self.unet = None
         else:
-            self.unet = self._build_simple_unet(self._input_shape, self.n_classes)
+            self.unet = self._build_simple_unet(
+                self._input_shape, self.n_classes,
+                activation=self.activation
+            )
 
     def compile_model(self, optimizer, loss, **kwargs):
         self.unet.compile(optimizer=optimizer, loss=loss, **kwargs)
