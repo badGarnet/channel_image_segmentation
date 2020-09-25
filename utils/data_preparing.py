@@ -14,7 +14,7 @@ import shutil
 def move_files_into_train_test(
     path, base_pattern, seed=42, splits={'train': 0.7, 'test': 0.3}):
     files = os.listdir(path)
-    index = np.array([f for f in files if base_pattern in f])
+    index = [f for f in files if base_pattern in f]
     total_sample_size = len(index)
     np.random.seed(seed)
     np.random.shuffle(index)
@@ -165,10 +165,10 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
         path / (prefix + 'image.png'), tensor[:, :, :3]
     )
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'elevation.png'), tensor[:, :, 3:4]
+        path / (prefix + 'elevation.png'), tensor[:, :, 4:]
     )
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'mask.png'), tensor[:, :, 4:] / 255
+        path / (prefix + 'mask.png'), tensor[:, :, 3:4] / 255
     )
 
 
@@ -274,10 +274,10 @@ class ChannelData:
 
 def main():
     data_path = Path('./data')
-    crop_path = data_path / 'crop_512x320'
+    crop_path = data_path / 'crop_arkansas_512x320'
     os.makedirs(crop_path, exist_ok=True)
     # load all data into numpy
-    fnames = [f for f in os.listdir(data_path) if f.endswith('.npy')]
+    fnames = [f for f in os.listdir(data_path) if (f.startswith('tbd_19') & f.endswith('.npy'))]
 
     for part, f in enumerate(fnames):
         data = np.load(data_path / f).astype(int)
