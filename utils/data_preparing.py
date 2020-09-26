@@ -185,6 +185,7 @@ class ChannelData:
             image_key=image_key,
             **kwargs
         )]
+        self.feature_channels = 3 + len(kwargs)
         self._data_mapping()
 
     def _data_mapping(self, process=None):
@@ -232,7 +233,7 @@ class ChannelData:
 
         n_args = len(args.args)
         if n_args <= 1:
-            n_process = self._bundled_process(process, **kwargs)
+            n_process = self._bundled_process(process, feature_channels=self.feature_channels, **kwargs)
         elif n_args == 2:
             if len(kwargs) > 0:
                 n_process = partial(process, **kwargs)
@@ -245,7 +246,7 @@ class ChannelData:
         return self
 
     @staticmethod
-    def _bundled_process(process, **kwargs):
+    def _bundled_process(process, feature_channels=4, **kwargs):
 
         @tf.function
         def wrapper(features, labels, cat_axis=-1):
@@ -257,7 +258,7 @@ class ChannelData:
                 i_label = tf.range(n_channels_feature, n_channels_feature + labels.shape[cat_axis])
             else:
                 # TODO: how to get n channels when all is (none, none, none)
-                i_features, i_label = tf.range(4), tf.range(4, 5)
+                i_features, i_label = tf.range(feature_channels), tf.range(feature_channels, feature_channels+1)
 
             # bundle data
             bundled = tf.concat([features, labels], axis=cat_axis)

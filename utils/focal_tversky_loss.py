@@ -114,11 +114,15 @@ def mean_iou_loss(y_true_in, y_pred_in, sigma=1):
     else:
         return 1 - mean_iou
 
-def reduced_iou_loss(y_true_in, y_pred_in, sigma=1):
+def reduced_iou_loss(y_true_in, y_pred_in, sigma=1, fp_weight=1):
     y_true, y_pred = prepare(y_true_in, y_pred_in)
 
     ref_vol = tf.keras.backend.flatten(y_true)
     seg_vol = tf.keras.backend.flatten(y_pred)
+
+    if fp_weight != 1:
+        fp = seg_vol * (1 - ref_vol)
+        seg_vol = seg_vol - (1 - fp_weight) * fp
     # intersect = ref_vol * seg_vol
     # generalised_dice_numerator = 2. * tf.reduce_sum(intersect)
     # generalised_dice_denominator = tf.reduce_sum(seg_vol + ref_vol)
@@ -130,3 +134,12 @@ def weighted_ce_loss(y_true_in, y_pred_in, pos_weight=1):
     y_true, y_pred = prepare(y_true_in, y_pred_in)
     loss = tf.nn.weighted_cross_entropy_with_logits(y_true, y_pred, pos_weight=pos_weight)
     return tf.reduce_sum(loss)
+
+
+class IOULoss:
+    def __init__(self, fp_weight=1, sigma=1):
+        self.fp_weight=fp_weight
+        self.sigma = sigma
+
+    def loss(self, y_true_in, y_pred_in):
+        return reduced_iou_loss(y_true_in, y_pred_in, self.sigma, self.fp_weight)
