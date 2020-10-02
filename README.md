@@ -25,9 +25,9 @@ We recommend using virtual environments to isolate the program environment. The 
 
 ```terminal
 cd \path\to\repo
-python3 -m venv .venv
+python -m venv .venv
 .venv\Scripts\activate
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 On Linux/MacOS:
@@ -42,3 +42,13 @@ pip3 install -r requirements.txt
 This project uses [Tensorflow](https://www.tensorflow.org/) to construct the CNN models. 
 
 GPU or better resource is recommended to train the model. One could experiment or demo with a small sample dataset on a CPU only environment.
+
+## Run example model scripts
+
+The repository includes an example unet model. The model loads data from specified path as ChannelData objects and feeds them into the model pipeline. The model script is `utils/run_unet.py`. To use it please follow the steps below:
+
+- ensure a tensorflow environment is activated (see section above for more information)
+- set the path to the train and vali datasets in lines 29 to 36 where `train_data` and `val_data` objects are defined.
+- set the false positive loss weight at line 25: if `fp_weight` < 1, the model tolerates false positive more than false negative; this can lead to a model segmenting more channels than training masks but potentially pick up subtle channels beyond human interpretation
+- set model building mode at line 19 to either a learning rate finding mode (`find_lr = True`) or model training mode (`find_lr = False`); by default the model uses a scheduler to change learning rate from `1e-3` to `1e4` (lines 81 to 86)
+- execute `python run_unet.py` on Windows or `python3 run_unet.py` on Linux/Mac to start model training/learning rate finding
