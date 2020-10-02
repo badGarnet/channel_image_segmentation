@@ -3,7 +3,7 @@ data/
 
 # logs
 logs/
-notes/models/
+models/
 
 # IDE
 .vscode
