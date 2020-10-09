@@ -11,7 +11,7 @@ from functools import partial
 import json
 
 from data_preparing import ChannelData, random_rotation
-from model import ChannelCutter, LRFinder
+from model import ChannelCutter, LRFinder, save_predictions
 from focal_tversky_loss import *
 
 
@@ -44,6 +44,7 @@ model = ChannelCutter({
 
 BATCH_SIZE = 2
 BUFFER_SIZE = 6
+EPOCHS = 2
 
 train_dataset =  train_data.data\
     .shuffle(BUFFER_SIZE)\
@@ -103,7 +104,7 @@ else:
 
     # training the model
     model.unet.fit(
-        train_dataset, epochs=10, validation_data=val_dataset,
+        train_dataset, epochs=EPOCHS, validation_data=val_dataset,
         callbacks=[tensorboard_callback, early_stopping_callback]
     )
 
@@ -117,17 +118,20 @@ else:
     print(f'model saved to {model_path}')
 
     # examine 5 sample validation images to visually check model performance beyond metrics
-    n_samples = 5
-    fig, axes = plt.subplots(nrows=3, ncols=n_samples, figsize=(n_samples*5, 15))
-    i = 0
-    tf.random.set_seed(2)
-    for x, y in val_dataset.take(5):
-        axes[0][i].imshow(x[0, :, : :])
-        axes[1][i].imshow(y[0, :, : :])
-        axes[2][i].imshow(model.unet.predict(x)[0, :, :, 1])
-        i += 1
+    print('generating predictions for training and validation datasets')
+    save_predictions(model.unet, train_data.data, save_path / 'train_preds', prefix='train_')
+    save_predictions(model.unet, val_data.data, save_path / 'val_preds', prefix='val_')
+    # n_samples = 5
+    # fig, axes = plt.subplots(nrows=3, ncols=n_samples, figsize=(n_samples*5, 15))
+    # i = 0
+    # tf.random.set_seed(2)
+    # for x, y in val_dataset.take(5):
+    #     axes[0][i].imshow(x[0, :, : :])
+    #     axes[1][i].imshow(y[0, :, : :])
+    #     axes[2][i].imshow(model.unet.predict(x)[0, :, :, 1])
+    #     i += 1
 
-    plt.show()
-    plt.savefig(save_path / 'example_vals_1.png')
-    print(f'5 example results from the validation set are saved at {save_path}')
+    # plt.show()
+    # plt.savefig(save_path / 'example_vals_1.png')
+    # print(f'5 example results from the validation set are saved at {save_path}')
 

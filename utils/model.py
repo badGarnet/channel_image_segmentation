@@ -15,6 +15,34 @@ from tensorflow.keras.callbacks import Callback
 import matplotlib.pyplot as plt
 
 
+def save_predictions(model, dataset, save_path, prefix=''):
+    """saving predicted masks with original image, DEM, and human interpreted mask
+
+    Example:
+        `save_predictions(train_data.data, Path('train_results'))`
+
+    Args:
+        model (tf.keras.Model): a trained model that has `predict(x)` method to make a prediction
+        dataset (tf.data.Dataset): dataset to be used for prediction; must be tuples of (x, y) for each member; 
+            must not be batched
+        save_path (pathlib.Path): place to save the images
+    """
+
+    if not os.path.exists(save_path):
+        os.makedirs(save_path, exist_ok=True)
+
+    i = 0
+    for x, y in dataset.batch(1):
+        fig, axes = plt.subplots(nrows=1, ncols=4, figsize=(20, 5))
+        axes[0].imshow(x[0, :, :, :3])
+        axes[1].imshow(x[0, :, :, 3])
+        axes[2].imshow(y[0, :, : :])
+        axes[3].imshow(model.predict(x)[0, :, :, 1])
+        i += 1
+        plt.savefig(save_path / f'{prefix}preds_{str(i)}.png')
+        plt.close()
+
+
 class LRFinder(Callback):
     """Callback that exponentially adjusts the learning rate after each training batch between start_lr and
     end_lr for a maximum number of batches: max_step. The loss and learning rate are recorded at each step allowing
