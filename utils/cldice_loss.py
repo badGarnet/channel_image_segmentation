@@ -18,11 +18,12 @@ import tensorflow.keras.backend as K
 def _move_channel_to_first(*args):
     results = list()
     for x in args:
-        if tf.size(x.shape) == 4:
+        rank = x.shape.rank
+        if rank == 4:
             results.append(tf.transpose(x, (0, 3, 1, 2)))
-        elif tf.size(x.shape) == 3:
+        elif rank == 3:
             results.append(tf.transpose(x, (2, 0, 1)))
-        elif tf.size(x.shape) == 2:
+        elif rank == 2:
             results.append(x)
         else:
             results.append(x)
@@ -37,11 +38,12 @@ def _move_channel_to_first(*args):
 def _move_channel_to_last(*args):
     results = list()
     for x in args:
-        if tf.size(x.shape) == 4:
+        rank = x.shape.rank
+        if rank == 4:
             results.append(tf.transpose(x, (0, 2, 3, 1)))
-        elif tf.size(x.shape) == 3:
+        elif rank == 3:
             results.append(tf.transpose(x, (1, 2, 0)))
-        elif tf.size(x.shape) == 2:
+        elif rank == 2:
             results.append(x)
         else:
             results.append(x)
@@ -69,9 +71,9 @@ def _maybe_trim_logits(pred, target, data_format="channels_first"):
         pred, target = _move_channel_to_last(pred, target)
 
     if (target.shape[-1] == 1) and (pred.shape[-1] == 2):
-        other_sizes = pred.shape[:-1]
+        # other_sizes = pred.shape[:-1]
         pred = tf.gather(pred, [-1], axis=-1)
-        pred = tf.reshape(pred, [*other_sizes, 1])
+        # pred = tf.reshape(pred, [*other_sizes, 1])
 
     return pred, target
 
