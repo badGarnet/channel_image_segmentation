@@ -10,6 +10,7 @@
 from tensorflow.keras.losses import binary_crossentropy
 import tensorflow.keras.backend as K
 import tensorflow as tf 
+import inspect
 
 epsilon = 1e-5
 smooth = 1
@@ -93,6 +94,7 @@ def focal_tversky(y_true,y_pred):
     return K.pow((1-pt_1), gamma)
 
 # credit: Yao You
+# adds more iou loss and classes to combine different loss functions
 
 def mean_iou_loss(y_true_in, y_pred_in, sigma=1):
     y_true, y_pred = prepare(y_true_in, y_pred_in)
@@ -133,7 +135,7 @@ def reduced_iou_loss(y_true_in, y_pred_in, sigma=1, fp_weight=1):
 def weighted_ce_loss(y_true_in, y_pred_in, pos_weight=1):
     y_true, y_pred = prepare(y_true_in, y_pred_in)
     loss = tf.nn.weighted_cross_entropy_with_logits(y_true, y_pred, pos_weight=pos_weight)
-    return tf.reduce_sum(loss)
+    return tf.reduce_mean(loss)
 
 
 class IOULoss:
@@ -143,3 +145,17 @@ class IOULoss:
 
     def loss(self, y_true_in, y_pred_in):
         return reduced_iou_loss(y_true_in, y_pred_in, self.sigma, self.fp_weight)
+
+
+class ComboLoss:
+    def __init__(self, *components):
+        self._components = components
+
+    def loss(self, y_true, y_pred):
+        result = 0
+        for component in self._components:
+            if hasattr(component, "loss"):
+                result += component.loss(y_true, y_pred)
+            else:
+                result += component(y_true, y_pred)
+        return result

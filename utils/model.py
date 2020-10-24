@@ -14,6 +14,55 @@ from tensorflow.keras.layers import Conv2D, Conv2DTranspose, MaxPool2D, \
 from tensorflow.keras.callbacks import Callback
 import matplotlib.pyplot as plt
 
+from math import ceil
+import PIL.Image as Image
+
+
+def _mock_model(img):
+    return img
+
+
+def split_process_stitch_images(img, height, width, process=_mock_model, name='test'):
+    """split an image of shape [height, width, channel] into segments, then 
+    apply `process` to each segment, finally stitch the processed results
+    back to [height, width, channel] shaped array"""
+    img_h, img_w = img.shape[0], img.shape[1]
+    assert img_h >= height
+    assert img_w >= width
+    
+    n_h = ceil(img_h / height)
+    n_w = ceil(img_w / width)
+    
+    splits = []
+    corners = []
+    for i_h in range(n_h):
+        for i_w in range(n_w):
+            if i_h < n_h - 1:
+                bot, top = i_h * height, (i_h + 1) * height
+            else:
+                bot, top = img_h - height, img_h
+                
+            if i_w < n_w - 1:
+                left, right = i_w * width, (i_w + 1) * width,
+            else:
+                left, right = img_w - width, img_w
+                
+            i_img = img[bot:top, left:right, :]
+            
+            splits.append(i_img)
+            corners.append([bot, top, left, right])
+            
+    batch = np.array(splits)
+    batch = np.moveaxis(batch, -1, 0)
+    masks = process(batch)
+    stitch = np.zeros(img.shape[:2])
+    
+    for mask, corner in zip(masks, corners):
+        bot, top, left, right = corner
+        stitch[bot:top, left:right] = mask
+    
+    return stitch
+
 
 def save_predictions(model, dataset, save_path, prefix=''):
     """saving predicted masks with original image, DEM, and human interpreted mask
