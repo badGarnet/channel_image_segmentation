@@ -33,6 +33,13 @@ def split_process_stitch_images(img, height, width, process=_mock_model, name='t
     n_h = ceil(img_h / height)
     n_w = ceil(img_w / width)
     
+    # process the elevation layer using the same steps used for training
+    # this is kinda awkward and hopefully I can find a neater solution
+    tf.keras.preprocessing.image.save_img('ele.png', img[:, :, 3:])
+    ele_tf = tf.image.decode_png(tf.io.read_file('ele.png'))
+    
+    img[:, :, 3:] = ele_tf
+    
     splits = []
     corners = []
     for i_h in range(n_h):
@@ -52,14 +59,14 @@ def split_process_stitch_images(img, height, width, process=_mock_model, name='t
             splits.append(i_img)
             corners.append([bot, top, left, right])
             
-    batch = np.array(splits)
-    batch = np.moveaxis(batch, -1, 0)
+    batch = np.stack(splits, axis=0)
+    batch = tf.convert_to_tensor(batch, dtype=tf.uint8)
     masks = process(batch)
     stitch = np.zeros(img.shape[:2])
     
     for mask, corner in zip(masks, corners):
         bot, top, left, right = corner
-        stitch[bot:top, left:right] = mask
+        stitch[bot:top, left:right] = mask[:, :, 1]
     
     return stitch
 
