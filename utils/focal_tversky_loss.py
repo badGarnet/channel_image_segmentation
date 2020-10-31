@@ -25,6 +25,38 @@ def prepare(y_true, y_pred):
     
     return tf.cast(y_true_probs, tf.float32), tf.cast(y_pred_probs, tf.float32)
 
+
+def running_recall(y_true, y_pred):
+    TP = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    TP_FN = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = TP / (TP_FN + K.epsilon())
+    return recall
+
+def running_precision(y_true, y_pred):
+    TP = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    TP_FP = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = TP / (TP_FP + K.epsilon())
+    return precision
+
+def running_f1(y_true, y_pred):
+    precision = running_precision(y_true, y_pred)
+    recall = running_recall(y_true, y_pred)
+    return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
+
+def adaptive_maxpool_loss(y_true_in, y_pred_in, alpha=0.25):
+    # y_true, y_pred = prepare(y_true_in, y_pred_in)
+    y_true = tf.cast(y_true_in, tf.float32)
+    y_pred = tf.cast(y_pred_in, tf.float32)
+    y_pred = K.clip(y_pred, K.epsilon(), 1. - K.epsilon())
+    positive = -y_true * K.log(y_pred) * alpha
+    negative = -(1. - y_true) * K.log(1. - y_pred) * (1-alpha)
+    pointwise_loss = positive + negative
+    max_loss = tf.keras.layers.MaxPool2D(pool_size=8, strides=1, padding='same')(pointwise_loss)
+    x = pointwise_loss * max_loss
+    x = K.mean(x, axis=-1)
+    return x
+
+
 def dsc(y_true_in, y_pred_in):
     y_true, y_pred = prepare(y_true_in, y_pred_in)
     smooth = 1.
