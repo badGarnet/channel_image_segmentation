@@ -162,7 +162,7 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
     """
     prefix += f'batch_{batch}_num_{idx}_'
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'image.png'), normalize_with_moments(tensor[:, :, :3])
+        path / (prefix + 'image.png'), tf.image.per_image_standardization(tensor[:, :, :3])
     )
     elevation = tensor[:, :, 4:]
     tf.keras.preprocessing.image.save_img(

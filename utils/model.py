@@ -40,7 +40,7 @@ def split_process_stitch_images(img, height, width, process=_mock_model, name='t
 
     if standardize:
         ele_tf = ele_tf
-        img[:, :, :3] = normalize_with_moments(img[:, :, :3])
+        img[:, :, :3] = tf.image.per_image_standardization(img[:, :, :3])
     
     img[:, :, 3:] = ele_tf
     
