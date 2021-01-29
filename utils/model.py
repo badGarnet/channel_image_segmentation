@@ -39,7 +39,7 @@ def split_process_stitch_images(img, height, width, process=_mock_model, name='t
     ele_tf = tf.image.decode_png(tf.io.read_file('ele.png'))
 
     if standardize:
-        ele_tf = ele_tf / tf.reduce_max(ele_tf)
+        ele_tf = ele_tf
         img[:, :, :3] = tf.image.per_image_standardization(img[:, :, :3])
     
     img[:, :, 3:] = ele_tf

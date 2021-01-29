@@ -11,6 +11,12 @@ import random
 import shutil
 
 
+def normalize_with_moments(x, axes=[0, 1], epsilon=1e-8):
+    mean, variance = tf.nn.moments(x, axes=axes)
+    x_normed = (x - mean) / tf.sqrt(variance + epsilon) # epsilon to avoid dividing by zero
+    return x_normed
+
+
 def move_files_into_train_test(
     path, base_pattern, seed=42, splits={'train': 0.7, 'test': 0.3}):
     files = os.listdir(path)
@@ -166,7 +172,7 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
     )
     elevation = tensor[:, :, 4:]
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'elevation.png'),  elevation / tf.reduce_max(elevation)
+        path / (prefix + 'elevation.png'),  elevation
     )
     tf.keras.preprocessing.image.save_img(
         path / (prefix + 'mask.png'), tensor[:, :, 3:4] / 255
@@ -276,7 +282,7 @@ class ChannelData:
 
 def main():
     data_path = Path('./data')
-    crop_path = data_path / 'crop_arkansas_512x320_norm'
+    crop_path = data_path / 'crop_arkansas_512x320_stand'
     os.makedirs(crop_path, exist_ok=True)
     # load all data into numpy
     fnames = [f for f in os.listdir(data_path) if (f.startswith('tbd_19') & f.endswith('.npy'))]
