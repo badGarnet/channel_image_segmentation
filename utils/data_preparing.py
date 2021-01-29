@@ -162,10 +162,11 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
     """
     prefix += f'batch_{batch}_num_{idx}_'
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'image.png'), tensor[:, :, :3]
+        path / (prefix + 'image.png'), tf.image.per_image_standardization(tensor[:, :, :3])
     )
+    elevation = tensor[:, :, 4:]
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'elevation.png'), tensor[:, :, 4:]
+        path / (prefix + 'elevation.png'),  elevation / tf.reduce_max(elevation)
     )
     tf.keras.preprocessing.image.save_img(
         path / (prefix + 'mask.png'), tensor[:, :, 3:4] / 255
@@ -275,7 +276,7 @@ class ChannelData:
 
 def main():
     data_path = Path('./data')
-    crop_path = data_path / 'crop_arkansas_512x320'
+    crop_path = data_path / 'crop_arkansas_512x320_norm'
     os.makedirs(crop_path, exist_ok=True)
     # load all data into numpy
     fnames = [f for f in os.listdir(data_path) if (f.startswith('tbd_19') & f.endswith('.npy'))]

@@ -22,7 +22,7 @@ def _mock_model(img):
     return img
 
 
-def split_process_stitch_images(img, height, width, process=_mock_model, name='test'):
+def split_process_stitch_images(img, height, width, process=_mock_model, name='test', standardize=False):
     """split an image of shape [height, width, channel] into segments, then 
     apply `process` to each segment, finally stitch the processed results
     back to [height, width, channel] shaped array"""
@@ -37,6 +37,10 @@ def split_process_stitch_images(img, height, width, process=_mock_model, name='t
     # this is kinda awkward and hopefully I can find a neater solution
     tf.keras.preprocessing.image.save_img('ele.png', img[:, :, 3:])
     ele_tf = tf.image.decode_png(tf.io.read_file('ele.png'))
+
+    if standardize:
+        ele_tf = ele_tf / tf.reduce_max(ele_tf)
+        img[:, :, :3] = tf.image.per_image_standardization(img[:, :, :3])
     
     img[:, :, 3:] = ele_tf
     
