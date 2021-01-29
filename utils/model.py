@@ -37,9 +37,10 @@ def split_process_stitch_images(img, height, width, process=_mock_model, name='t
     # this is kinda awkward and hopefully I can find a neater solution
     tf.keras.preprocessing.image.save_img('ele.png', img[:, :, 3:])
     ele_tf = tf.image.decode_png(tf.io.read_file('ele.png'))
+    mine, maxe = tf.reduce_min(ele_tf), tf.reduce_max(ele_tf)
 
     if standardize:
-        ele_tf = ele_tf
+        ele_tf = (ele_tf - mine) / (maxe - mine)
         img[:, :, :3] = tf.image.per_image_standardization(img[:, :, :3])
     
     img[:, :, 3:] = ele_tf

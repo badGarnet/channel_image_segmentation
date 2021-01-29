@@ -165,8 +165,9 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
         path / (prefix + 'image.png'), tf.image.per_image_standardization(tensor[:, :, :3])
     )
     elevation = tensor[:, :, 4:]
+    mine, maxe = -50, tf.reduce_max(elevation)
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'elevation.png'),  elevation
+        path / (prefix + 'elevation.png'),  (elevation - mine) / (maxe - mine)
     )
     tf.keras.preprocessing.image.save_img(
         path / (prefix + 'mask.png'), tensor[:, :, 3:4] / 255
