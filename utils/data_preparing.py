@@ -128,6 +128,18 @@ def load_multi_channel_data(path, extension, features=None, masks=None, process=
         return data[:, :, :, features], data[:, :, :, masks]
 
 
+def transform_selected(func, axes):
+    pass
+
+
+def random_hue(image, max_delta=0.1):
+    return tf.image.random_hue(image, max_delta=max_delta)
+
+
+def random_brightness(image, max_delta=0.1):
+    return tf.image.random_brightness(image, max_delta=max_delta)
+
+
 def crop_image(image, img_height=512, img_width=320, img_channel=5):
     """cropping image using tfa's random_crop method
 
@@ -162,7 +174,9 @@ def save_crops(tensor, prefix='', batch=0, idx=0, path=Path('.')):
     """
     prefix += f'batch_{batch}_num_{idx}_'
     tf.keras.preprocessing.image.save_img(
-        path / (prefix + 'image.png'), tf.image.per_image_standardization(tensor[:, :, :3])
+        path / (prefix + 'image.png'), random_brightness(random_hue(
+            tf.image.per_image_standardization(tensor[:, :, :3])
+        ))
     )
     elevation = tensor[:, :, 4:]
     mine, maxe = -50, tf.reduce_max(elevation)
@@ -277,7 +291,7 @@ class ChannelData:
 
 def main():
     data_path = Path('./data')
-    crop_path = data_path / 'crop_arkansas_512x320_moment_norm'
+    crop_path = data_path / 'crop_arkansas_512x320_normalized_random_med'
     os.makedirs(crop_path, exist_ok=True)
     # load all data into numpy
     fnames = [f for f in os.listdir(data_path) if (f.startswith('tbd_19') & f.endswith('.npy'))]
